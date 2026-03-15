@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['water-meter']
+
+roboflow:
+  workspace: jota-xkeph
+  project: water-level-7nmdo
+  version: 6
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/jota-xkeph/water-level-7nmdo/dataset/6

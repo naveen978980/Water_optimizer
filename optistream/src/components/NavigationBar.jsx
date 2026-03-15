@@ -1,47 +1,193 @@
-import { Waves, LifeBuoy, ShieldAlert, Sprout } from 'lucide-react'
+import { Droplets, Home, LifeBuoy, Map, ShieldAlert, Sprout } from 'lucide-react'
+import { THEMES } from '../config/themes'
 
 const navItems = [
-  { id: 'citizen', label: 'Citizen Portal', icon: LifeBuoy },
-  { id: 'flood', label: 'Flood Mode', icon: ShieldAlert },
-  { id: 'sustainability', label: 'Sustainability Mode', icon: Sprout },
+  { id: 'home',           label: 'Home',            icon: Home },
+  { id: 'citizen',        label: 'Citizen Portal',  icon: LifeBuoy },
+  { id: 'flood',          label: 'Flood Risk',      icon: ShieldAlert },
+  { id: 'watermap',       label: 'Water Map',       icon: Map },
+  { id: 'sustainability', label: 'Sustainability',  icon: Sprout },
 ]
 
-function NavigationBar({ activeView, onChange }) {
+function NavigationBar({ activeView, onChange, season = 'monsoon' }) {
+  const T = THEMES[season]
+
+  const handleNav = (id) => {
+    onChange(id)
+  }
+
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-800/90 bg-slate-950/90 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-cyan-500/20 p-2 text-cyan-300">
-            <Waves className="h-5 w-5" />
+    <header
+      className="os-header"
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+        background: '#fff',
+        boxShadow: '0 2px 20px rgba(0,0,0,0.07)',
+        borderBottom: '1px solid #e8eef1',
+      }}
+    >
+      {/* ── Top bar ─────────────────────────────────────────────────────── */}
+      <div
+        className="os-nav-inner"
+        style={{
+          padding: '0 clamp(16px, 5vw, 32px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 'clamp(56px, 10vw, 72px)',
+        }}
+      >
+        {/* Brand */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px, 2vw, 12px)' }}>
+          <div
+            style={{
+              background: T.gradNav,
+              borderRadius: 'clamp(8px, 2vw, 12px)',
+              padding: 'clamp(6px, 1.5vw, 8px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Droplets style={{ width: 'clamp(16px, 3vw, 20px)', height: 'clamp(16px, 3vw, 20px)', color: '#fff' }} />
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">AI-GIS Hydrology Platform</p>
-            <h1 className="text-lg font-semibold text-slate-100">OptiStream</h1>
+            <p
+              className="os-brand-subtitle"
+              style={{
+                color: '#5E6B73',
+                fontSize: 'clamp(8px, 1.8vw, 10px)',
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                fontWeight: 500,
+                lineHeight: 1,
+              }}
+            >
+              AI-GIS Hydrology Platform
+            </p>
+            <h1 style={{ color: '#1A1A1A', fontWeight: 700, fontSize: 'clamp(14px, 3vw, 17px)', lineHeight: 1.3, marginTop: '2px' }}>
+              OptiStream
+            </h1>
           </div>
         </div>
 
-        <nav className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {/* Desktop nav - hidden on mobile */}
+        <nav className="os-nav-links" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {navItems.map((item) => {
             const Icon = item.icon
             const selected = activeView === item.id
-
             return (
               <button
                 key={item.id}
                 type="button"
-                onClick={() => onChange(item.id)}
-                className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-                  selected
-                    ? 'border-cyan-400/60 bg-cyan-400/15 text-cyan-200 shadow-[0_0_22px_rgba(6,182,212,0.2)]'
-                    : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 hover:text-slate-100'
-                }`}
+                onClick={() => handleNav(item.id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  padding: 'clamp(8px, 1.5vw, 10px) clamp(14px, 3vw, 20px)',
+                  borderRadius: '25px',
+                  fontSize: 'clamp(12px, 2vw, 14px)',
+                  fontWeight: 500,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  transition: 'all 0.18s',
+                  border: selected ? 'none' : '1px solid #dce7eb',
+                  background: selected ? T.gradNav : 'transparent',
+                  color: selected ? '#fff' : '#5E6B73',
+                  boxShadow: selected ? `0 4px 14px ${T.btnGlow}` : 'none',
+                }}
               >
-                <Icon className="h-4 w-4" />
+                <Icon style={{ width: 15, height: 15 }} />
                 {item.label}
               </button>
             )
           })}
         </nav>
+
+        {/* Desktop auth buttons - hidden on mobile */}
+        <div className="os-auth-btns" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => handleNav('login')}
+            style={{
+              padding: 'clamp(7px, 1.5vw, 9px) clamp(16px, 3vw, 22px)',
+              borderRadius: '25px',
+              fontSize: 'clamp(12px, 2vw, 14px)',
+              fontWeight: 500,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              border: `1.5px solid ${T.primary}`,
+              background: 'transparent',
+              color: T.primary,
+              transition: 'all 0.18s',
+            }}
+          >
+            Log In
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNav('signup')}
+            style={{
+              padding: 'clamp(7px, 1.5vw, 9px) clamp(16px, 3vw, 22px)',
+              borderRadius: '25px',
+              fontSize: 'clamp(12px, 2vw, 14px)',
+              fontWeight: 600,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              border: 'none',
+              background: T.gradNav,
+              color: '#fff',
+              boxShadow: `0 4px 14px ${T.btnGlow}`,
+              transition: 'all 0.18s',
+            }}
+          >
+            Sign Up
+          </button>
+        </div>
+
+        {/* Mobile auth buttons - compact version */}
+        <div className="os-auth-btns-mobile" style={{ display: 'none', gap: 6, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => handleNav('login')}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: 500,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              border: `1.5px solid ${T.primary}`,
+              background: 'transparent',
+              color: T.primary,
+              transition: 'all 0.18s',
+            }}
+          >
+            Login
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNav('signup')}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: 600,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              border: 'none',
+              background: T.gradNav,
+              color: '#fff',
+              boxShadow: `0 4px 14px ${T.btnGlow}`,
+              transition: 'all 0.18s',
+            }}
+          >
+            Signup
+          </button>
+        </div>
       </div>
     </header>
   )

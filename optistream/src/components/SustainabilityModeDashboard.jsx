@@ -1,87 +1,381 @@
 import { Download, FlaskConical, GaugeCircle, Users, Waves, Wrench } from 'lucide-react'
+import WaterSustainabilityCalculator from './WaterSustainabilityCalculator'
 
-function SustainabilityModeDashboard({ metrics, autonomy, qualityAgent, infraAgent, onDownloadGeoJSON }) {
+const GRAD = 'linear-gradient(135deg, #1FA6C9, #0A5F8C)'
+
+function MetricCard({ icon: Icon, label, value, color }) {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard icon={Waves} label="Current Volume" value={metrics.currentVolume} accent="cyan" />
-        <MetricCard icon={Users} label="Local Population" value={metrics.population} accent="blue" />
-        <MetricCard icon={GaugeCircle} label="Evaporation Loss" value={metrics.evaporationLoss} accent="amber" />
+    <article
+      style={{
+        background: '#fff',
+        borderRadius: 12,
+        padding: '22px 24px',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.05)',
+        border: '1px solid #eef1f3',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div
+          style={{
+            background: `${color}18`,
+            borderRadius: 8,
+            padding: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Icon style={{ width: 18, height: 18, color }} />
+        </div>
+        <p style={{ color: '#5E6B73', fontSize: 13, fontWeight: 500 }}>{label}</p>
       </div>
+      <p style={{ color: '#1A1A1A', fontSize: 26, fontWeight: 700 }}>{value}</p>
+    </article>
+  )
+}
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
-        <article className="rounded-2xl border border-cyan-500/40 bg-gradient-to-br from-cyan-500/15 via-slate-900 to-slate-900 p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">The Coordinator Agent</p>
-          <h3 className="mt-2 text-2xl font-semibold text-white">Settlement Autonomy Prediction</h3>
+function SustainabilityModeDashboard({ metrics, autonomy, qualityAgent, infraAgent, onDownloadGeoJSON, waterSustainability }) {
+  console.log('🎨 SustainabilityModeDashboard render:', { metrics, autonomy, qualityAgent, infraAgent, waterSustainability });
+  
+  // Extract volumetric data from metrics if available
+  const extractVolumeData = () => {
+    if (!metrics) return { volume: '', area: '', depth: '', population: '4200' };
+    
+    // Use raw numeric values if available, otherwise parse formatted strings
+    const volumeStr = String(metrics.volume || metrics.currentVolume?.replace(/[^\d.]/g, '') || '');
+    const areaStr = String(metrics.area || metrics.surfaceArea?.replace(/[^\d.]/g, '') || '');
+    const depthStr = String(metrics.depth || '');
+    const populationStr = String(metrics.populationNum || metrics.population?.replace(/[^\d]/g, '') || '4200');
+    
+    console.log('📦 Extracted volume data:', { volumeStr, areaStr, depthStr, populationStr });
+    
+    return {
+      volume: volumeStr,
+      area: areaStr,
+      depth: depthStr,
+      population: populationStr
+    };
+  };
 
-          <div className="mt-8 text-center">
-            <p className="text-sm uppercase tracking-[0.22em] text-slate-400">Estimated Survival Window</p>
-            <p className="mt-2 text-7xl font-extrabold tracking-tight text-cyan-300 sm:text-8xl">{autonomy.daysLeft}</p>
-            <p className="mt-2 text-slate-300">Current storage projected under dry-season demand model</p>
+  const volumeData = extractVolumeData();
+  const hasData = volumeData.volume !== '' && volumeData.volume !== '0';
+  
+  // Get stress level color
+  const getStressColor = (level) => {
+    const levelStr = String(level || '').toUpperCase();
+    switch (levelStr) {
+      case 'CRITICAL': return '#DC2626';
+      case 'HIGH': return '#F59E0B';
+      case 'MODERATE': return '#3B82F6';
+      case 'LOW': return '#10B981';
+      default: return '#1FA6C9';
+    }
+  };
+  
+  // Print to PDF function
+  const handlePrintPDF = () => {
+    window.print();
+  };
+  
+  return (
+    <section style={{ background: '#F5F7F8', padding: '40px 0', minHeight: 'calc(100vh - 72px)' }}>
+      <div style={{ padding: '0 32px' }}>
+
+        {/* ── Metric cards ─────────────────────────────────────────────── */}
+        <div className="os-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 24 }}>
+          <MetricCard icon={Waves} label="Current Volume" value={metrics?.currentVolume ?? '—'} color="#1FA6C9" />
+          <MetricCard icon={Users} label="Local Population" value={metrics?.population ?? '—'} color="#1B8FA8" />
+          <MetricCard icon={GaugeCircle} label="Evaporation Loss" value={metrics?.evaporationLoss ?? '—'} color="#0A5F8C" />
+        </div>
+
+        {/* ── Additional Sustainability Metrics (from volume.py) ───────── */}
+        {waterSustainability && (
+          <div className="os-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+            <article style={{
+              background: '#fff',
+              borderRadius: 10,
+              padding: '18px 20px',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+              border: '1px solid #eef1f3',
+            }}>
+              <p style={{ color: '#5E6B73', fontSize: 12, fontWeight: 500, marginBottom: 8 }}>Daily Consumption</p>
+              <p style={{ color: '#1A1A1A', fontSize: 20, fontWeight: 700 }}>{waterSustainability.dailyConsumption ?? '—'}</p>
+            </article>
+            
+            <article style={{
+              background: '#fff',
+              borderRadius: 10,
+              padding: '18px 20px',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+              border: '1px solid #eef1f3',
+            }}>
+              <p style={{ color: '#5E6B73', fontSize: 12, fontWeight: 500, marginBottom: 8 }}>Seepage Loss</p>
+              <p style={{ color: '#1A1A1A', fontSize: 20, fontWeight: 700 }}>{waterSustainability.seepageLoss ?? '—'}</p>
+            </article>
+            
+            <article style={{
+              background: '#fff',
+              borderRadius: 10,
+              padding: '18px 20px',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+              border: '1px solid #eef1f3',
+            }}>
+              <p style={{ color: '#5E6B73', fontSize: 12, fontWeight: 500, marginBottom: 8 }}>Per Capita Daily</p>
+              <p style={{ color: '#1A1A1A', fontSize: 20, fontWeight: 700 }}>{waterSustainability.perCapitaAvailability ?? '—'}</p>
+            </article>
+            
+            <article style={{
+              background: waterSustainability.stressLevel ? `${getStressColor(waterSustainability.stressLevel)}15` : '#fff',
+              borderRadius: 10,
+              padding: '18px 20px',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+              border: `1px solid ${waterSustainability.stressLevel ? getStressColor(waterSustainability.stressLevel) + '40' : '#eef1f3'}`,
+            }}>
+              <p style={{ color: '#5E6B73', fontSize: 12, fontWeight: 500, marginBottom: 8 }}>Stress Level</p>
+              <p style={{ 
+                color: waterSustainability.stressLevel ? getStressColor(waterSustainability.stressLevel) : '#1A1A1A', 
+                fontSize: 20, 
+                fontWeight: 700 
+              }}>
+                {waterSustainability.stressLevel ?? '—'}
+              </p>
+            </article>
           </div>
+        )}
 
-          <div className="mt-8">
-            <div className="mb-2 flex justify-between text-sm text-slate-300">
-              <span>Capacity Remaining</span>
-              <span>{autonomy.capacityPercent}%</span>
-            </div>
-            <div className="h-3 overflow-hidden rounded-full bg-slate-800">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"
-                style={{ width: `${autonomy.capacityPercent}%` }}
-              />
-            </div>
-          </div>
-        </article>
+        {/* ── Lower grid ───────────────────────────────────────────────── */}
+        <div className="os-sustain-lower" style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.7fr', gap: 20 }}>
 
-        <aside className="space-y-4">
-          <article className="rounded-2xl border border-red-500/60 bg-red-500/10 p-5">
-            <p className="text-xs uppercase tracking-[0.2em] text-red-200">Quality Agent</p>
-            <h4 className="mt-2 flex items-center gap-2 text-lg font-semibold text-red-100">
-              <FlaskConical className="h-5 w-5" />
-              Water Quality Warning
-            </h4>
-            <p className="mt-2 text-sm text-red-100/90">{qualityAgent.message}</p>
-          </article>
-
-          <article className="rounded-2xl border border-green-500/60 bg-green-500/10 p-5">
-            <p className="text-xs uppercase tracking-[0.2em] text-green-200">Infrastructure Agent</p>
-            <h4 className="mt-2 flex items-center gap-2 text-lg font-semibold text-green-100">
-              <Wrench className="h-5 w-5" />
-              {infraAgent.title}
-            </h4>
-            <p className="mt-3 text-sm text-green-100/90">{infraAgent.description}</p>
-            <button
-              type="button"
-              onClick={onDownloadGeoJSON}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg border border-green-400/60 bg-green-400/20 px-3 py-2 text-sm font-semibold text-green-100 transition hover:bg-green-400/30"
+          {/* Autonomy card */}
+          <article
+            style={{
+              background: GRAD,
+              borderRadius: 12,
+              padding: '36px',
+              boxShadow: '0 10px 30px rgba(31,166,201,0.22)',
+              color: '#fff',
+            }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+                fontWeight: 600,
+                opacity: 0.82,
+              }}
             >
-              <Download className="h-4 w-4" />
-              Download GeoJSON
-            </button>
+              The Coordinator Agent
+            </p>
+            <h3 style={{ fontSize: 22, fontWeight: 600, marginTop: 8 }}>Settlement Autonomy Prediction</h3>
+
+            <div style={{ textAlign: 'center', marginTop: 36 }}>
+              <p
+                style={{
+                  fontSize: 12,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.2em',
+                  opacity: 0.72,
+                }}
+              >
+                Estimated Survival Window
+              </p>
+              <p
+                style={{
+                  fontSize: 76,
+                  fontWeight: 800,
+                  lineHeight: 1.1,
+                  marginTop: 8,
+                  letterSpacing: '-2px',
+                }}
+              >
+                {autonomy?.daysLeft ?? '—'}
+              </p>
+              <p style={{ fontSize: 14, opacity: 0.76, marginTop: 8 }}>
+                Projected under dry-season demand model
+              </p>
+            </div>
+
+            {/* Capacity bar */}
+            <div style={{ marginTop: 36 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 13,
+                  opacity: 0.88,
+                  marginBottom: 8,
+                }}
+              >
+                <span>Capacity Remaining</span>
+                <span>{autonomy?.capacityPercent ?? 0}%</span>
+              </div>
+              <div
+                style={{
+                  height: 8,
+                  borderRadius: '25px',
+                  background: 'rgba(255,255,255,0.22)',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    borderRadius: '25px',
+                    background: '#fff',
+                    width: `${autonomy?.capacityPercent ?? 0}%`,
+                    transition: 'width 1s ease',
+                  }}
+                />
+              </div>
+            </div>
           </article>
-        </aside>
+
+          {/* Agent cards */}
+          <aside style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* Quality agent */}
+            <article
+              style={{
+                background: '#fff',
+                borderRadius: 12,
+                padding: '24px',
+                border: '1px solid #fee2e2',
+                boxShadow: '0 4px 16px rgba(239,68,68,0.06)',
+                flex: 1,
+              }}
+            >
+              <p
+                style={{
+                  color: '#dc2626',
+                  fontSize: 11,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.16em',
+                  fontWeight: 600,
+                }}
+              >
+                Quality Agent
+              </p>
+              <h4
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  color: '#1A1A1A',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  margin: '10px 0',
+                }}
+              >
+                <FlaskConical style={{ width: 18, height: 18, color: '#dc2626' }} />
+                Water Quality Warning
+              </h4>
+              <p style={{ color: '#5E6B73', fontSize: 13, lineHeight: 1.65 }}>{qualityAgent?.message ?? '—'}</p>
+            </article>
+
+            {/* Infra agent */}
+            <article
+              style={{
+                background: '#fff',
+                borderRadius: 12,
+                padding: '24px',
+                border: '1px solid #bbf7d0',
+                boxShadow: '0 4px 16px rgba(34,197,94,0.05)',
+                flex: 1,
+              }}
+            >
+              <p
+                style={{
+                  color: '#16a34a',
+                  fontSize: 11,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.16em',
+                  fontWeight: 600,
+                }}
+              >
+                Infrastructure Agent
+              </p>
+              <h4
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  color: '#1A1A1A',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  margin: '10px 0',
+                }}
+              >
+                <Wrench style={{ width: 18, height: 18, color: '#16a34a' }} />
+                {infraAgent?.title ?? '—'}
+              </h4>
+              <p style={{ color: '#5E6B73', fontSize: 13, lineHeight: 1.65 }}>{infraAgent?.description ?? ''}</p>
+              <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handlePrintPDF}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    background: GRAD,
+                    color: '#fff',
+                    padding: '10px 18px',
+                    borderRadius: '25px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    boxShadow: '0 4px 12px rgba(31,166,201,0.28)',
+                  }}
+                >
+                  <Download style={{ width: 14, height: 14 }} />
+                  Print PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={onDownloadGeoJSON}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    background: '#fff',
+                    color: '#1FA6C9',
+                    padding: '10px 18px',
+                    borderRadius: '25px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    border: '2px solid #1FA6C9',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <Download style={{ width: 14, height: 14 }} />
+                  GeoJSON
+                </button>
+              </div>
+            </article>
+          </aside>
+        </div>
+
+        {/* ── Water Sustainability Calculator ─────────────────────────── */}
+        <div style={{ marginTop: 32 }}>
+          <WaterSustainabilityCalculator 
+            initialVolume={volumeData.volume}
+            initialArea={volumeData.area}
+            initialDepth={volumeData.depth}
+            initialPopulation={volumeData.population}
+            autoCalculate={hasData}
+          />
+        </div>
       </div>
     </section>
   )
 }
 
-function MetricCard({ icon, label, value, accent }) {
-  const accentMap = {
-    cyan: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200',
-    blue: 'border-blue-500/40 bg-blue-500/10 text-blue-200',
-    amber: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
-  }
-
-  return (
-    <article className={`rounded-xl border p-4 ${accentMap[accent]}`}>
-      <p className="text-xs uppercase tracking-[0.18em]">{label}</p>
-      <p className="mt-3 flex items-center gap-2 text-2xl font-semibold text-white">
-        {icon({ className: 'h-5 w-5' })}
-        {value}
-      </p>
-    </article>
-  )
-}
-
 export default SustainabilityModeDashboard
+

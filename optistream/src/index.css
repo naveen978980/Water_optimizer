@@ -1,10 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
 :root {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
-  color: #f8fafc;
-  background-color: #020617;
+  --color-primary: #1FA6C9;
+  --color-primary-dark: #0A5F8C;
+  --color-secondary: #1B8FA8;
+  --color-bg: #F5F7F8;
+  --color-white: #ffffff;
+  --color-text: #1A1A1A;
+  --color-muted: #5E6B73;
+  --color-border: #E0E9ED;
+  font-family: 'Poppins', 'Segoe UI', sans-serif;
+  color: #1A1A1A;
+  background-color: #F5F7F8;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -13,24 +20,525 @@
 
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    radial-gradient(1200px 700px at 92% -10%, rgba(8, 145, 178, 0.28), transparent 60%),
-    radial-gradient(1000px 600px at -12% 100%, rgba(59, 130, 246, 0.18), transparent 55%),
-    #020617;
+  background: #F5F7F8;
 }
 
 #root {
   min-height: 100vh;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.os-spinner {
+  animation: spin 0.9s linear infinite;
+}
+
 .leaflet-container {
   width: 100%;
   height: 100%;
-  background: #0b1220;
+  background: #d4e9f0;
+}
+
+/* Print Styles for PDF Generation */
+@media print {
+  /* Hide navigation and non-essential elements */
+  nav, .os-mobile-nav, button:not(.no-print), header, footer {
+    display: none !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+
+  body {
+    background: white !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Ensure content fits on page */
+  section {
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  /* Keep metric cards visible */
+  .os-grid-3, .os-grid-4 {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Ensure gradient backgrounds print */
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+
+  /* Add page breaks where appropriate */
+  .os-sustain-lower {
+    page-break-before: auto;
+    page-break-inside: avoid;
+  }
+
+  /* Show print buttons */
+  button.no-print {
+    display: inline-flex !important;
+  }
+  
+  /* Add report title */
+  section::before {
+    content: "Water Sustainability Report";
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1FA6C9;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+}
+
+/* ── Responsive Design System ─────────────────────────────────────────────── */
+
+/* Container responsive padding */
+.os-container {
+  padding: clamp(16px, 3vw, 32px);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Responsive grids */
+.os-grid-responsive {
+  display: grid;
+  gap: clamp(12px, 2vw, 20px);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+/* Card responsive styling */
+.os-card-responsive {
+  background: white;
+  border-radius: clamp(12px, 2vw, 16px);
+  padding: clamp(16px, 3vw, 24px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+/* Typography responsive */
+.os-heading-1 {
+  font-size: clamp(24px, 5vw, 36px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.os-heading-2 {
+  font-size: clamp(20px, 4vw, 28px);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.os-heading-3 {
+  font-size: clamp(16px, 3vw, 20px);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.os-body-text {
+  font-size: clamp(14px, 2.5vw, 16px);
+  line-height: 1.6;
+}
+
+/* Button responsive */
+.os-btn-responsive {
+  padding: clamp(10px, 2vw, 14px) clamp(20px, 4vw, 32px);
+  font-size: clamp(13px, 2.5vw, 15px);
+  border-radius: clamp(8px, 2vw, 12px);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: none;
+  font-family: inherit;
+}
+
+/* Metric card responsive */
+.os-metric-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbfc 100%);
+  border-radius: clamp(12px, 2vw, 16px);
+  padding: clamp(16px, 3vw, 24px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  border: 1px solid #E8F3F7;
+  transition: all 0.3s ease;
+}
+
+.os-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(31, 166, 201, 0.12);
+}
+
+/* ── Tablet Breakpoint (481px - 768px) ────────────────────────────────────── */
+@media (max-width: 768px) {
+  .os-container {
+    padding: 16px;
+  }
+  
+  .os-hero-section {
+    padding: 32px 16px !important;
+  }
+  
+  /* Stack cards vertically on mobile */
+  .os-grid-3,
+  .os-grid-4,
+  .os-grid-6 {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Adjust dashboard sections */
+  .os-sustain-upper,
+  .os-sustain-lower {
+    padding: 16px !important;
+  }
+  
+  /* Make tables scrollable */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  /* Responsive images */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Map containers */
+  .leaflet-container {
+    height: 400px !important;
+    min-height: 300px;
+  }
+  
+  /* Form inputs full width */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  textarea,
+  select {
+    width: 100%;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* ── Mobile Small (max 480px) ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+  
+  .os-container {
+    padding: 12px;
+  }
+  
+  /* Smaller heading on tiny screens */
+  .os-heading-1 {
+    font-size: 22px !important;
+  }
+  
+  .os-heading-2 {
+    font-size: 18px !important;
+  }
+  
+  /* Compact metric cards */
+  .os-metric-card {
+    padding: 12px 16px !important;
+  }
+  
+  /* Smaller buttons */
+  .os-btn-responsive {
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+  }
+  
+  /* Map height adjustment */
+  .leaflet-container {
+    height: 300px !important;
+  }
+  
+  /* Even more compact mobile auth buttons */
+  .os-auth-btns-mobile button {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    border-radius: 18px !important;
+  }
+}
+
+/* ── Large Desktop (min 1440px) ───────────────────────────────────────────── */
+@media (min-width: 1440px) {
+  .os-container {
+    max-width: 1400px;
+  }
+  
+  .os-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .os-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .os-grid-6 {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* ── Touch Screen Optimizations ───────────────────────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger touch targets */
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Remove hover effects on touch devices */
+  .mobile-nav-item:hover::before,
+  .os-metric-card:hover {
+    background: inherit;
+    transform: none;
+  }
+  
+  /* Enhance active/tap states */
+  button:active,
+  a:active {
+    opacity: 0.7;
+  }
+}
+
+/* ── Responsive helpers ──────────────────────────────────────────────────── */
+
+/* 2-col upload grid in CitizenPortal */
+.os-upload-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* 3-column feature / metric grids */
+.os-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* 2-column product / hero sections */
+.os-grid-2-product {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* 6-column integrations row */
+.os-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+}
+
+/* Flood dashboard 2-panel layout */
+.os-flood-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 20px;
+  padding: 20px;
+  background: #F5F7F8;
+  box-sizing: border-box;
+  height: calc(100vh - 72px);
+}
+.os-flood-sidebar {
+  overflow-y: auto;
+}
+
+/* Sustainability lower grid */
+.os-sustain-lower {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+}
+
+/* Responsive hero heading */
+.os-hero-h1 {
+  font-size: 64px;
+}
+
+/* ── Tablet ≤ 1024px ─────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .os-hero-h1 { font-size: 48px !important; }
+  .os-grid-6  { grid-template-columns: repeat(3, 1fr) !important; }
+  .os-flood-layout {
+    grid-template-columns: 300px 1fr !important;
+  }
+}
+
+/* ── Mobile ≤ 768px ──────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Show hamburger, hide desktop nav + auth */
+  .os-hamburger { display: flex !important; }
+  .os-nav-links { display: none !important; }
+  .os-auth-btns { display: none !important; }
+
+  /* Tighter nav bar padding */
+  .os-nav-inner { padding: 0 16px !important; }
+
+  /* Typography */
+  .os-hero-h1 { font-size: 34px !important; letter-spacing: 0 !important; }
+
+  /* Grids → single column */
+  .os-grid-3          { grid-template-columns: 1fr !important; }
+  .os-grid-2-product  { grid-template-columns: 1fr !important; gap: 40px !important; }
+  .os-grid-6          { grid-template-columns: repeat(2, 1fr) !important; }
+  .os-upload-grid     { grid-template-columns: 1fr !important; }
+  .os-sustain-lower   { grid-template-columns: 1fr !important; }
+
+  /* Flood dashboard stacks vertically */
+  .os-flood-layout {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+  .os-flood-sidebar {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  /* Section padding */
+  .os-section-pad { padding: 0 16px !important; }
+}
+
+/* ── Small mobile ≤ 480px ────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .os-hero-h1 { font-size: 28px !important; }
+  .os-grid-6  { grid-template-columns: 1fr 1fr !important; }
+}
+
+/* ── Mobile Bottom Navigation ─────────────────────────────────────────────── */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,1) 100%);
+  border-top: 1px solid #E0E9ED;
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  z-index: 1000;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+  justify-content: space-around;
+  align-items: center;
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  transition: all 0.25s ease;
+  flex: 1;
+  max-width: 85px;
+  position: relative;
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.95);
+}
+
+.mobile-nav-item::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  background: rgba(31, 166, 201, 0);
+  border-radius: 50%;
+  transition: all 0.25s ease;
+}
+
+.mobile-nav-item:hover::before {
+  background: rgba(31, 166, 201, 0.08);
+}
+
+.mobile-nav-item.active::before {
+  background: rgba(31, 166, 201, 0.12);
+}
+
+.mobile-nav-icon {
+  color: #5E6B73;
+  transition: all 0.25s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.mobile-nav-item.active .mobile-nav-icon {
+  color: #1FA6C9;
+  transform: translateY(-2px);
+}
+
+.mobile-nav-label {
+  font-size: 11px;
+  margin-top: 4px;
+  color: #5E6B73;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.mobile-nav-item.active .mobile-nav-label {
+  color: #1FA6C9;
+  font-weight: 600;
+}
+
+/* Show mobile nav on smaller screens */
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: flex !important;
+  }
+  
+  /* Hide desktop navigation on mobile */
+  .os-nav-links,
+  .os-auth-btns {
+    display: none !important;
+  }
+  
+  /* Show mobile auth buttons */
+  .os-auth-btns-mobile {
+    display: flex !important;
+  }
+  
+  /* Adjust brand subtitle visibility */
+  .os-brand-subtitle {
+    display: none;
+  }
+}
+
+/* Hide on desktop */
+@media (min-width: 769px) {
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+  
+  main {
+    padding-bottom: 0 !important;
+  }
 }

@@ -1,108 +1,301 @@
-import { AlertTriangle, Bell, Droplets, Siren, Timer } from 'lucide-react'
-import { MapContainer, Polygon, TileLayer } from 'react-leaflet'
+import { useEffect, useMemo, useState } from 'react'
+import { Bell, CloudRain, Droplets, Siren, Timer } from 'lucide-react'
+import { MapContainer, Polygon, TileLayer, Tooltip } from 'react-leaflet'
+import rawZones from '../data/floodZones.json'
+import { LAMBDA } from '../config/lambdaUrls'
 
-const mapCenter = [13.0827, 80.2707]
+// GeoJSON stores [lon, lat] — Leaflet Polygon needs [lat, lon]
+const ZONES = rawZones.map((z, i) => ({
+  id: i,
+  positions: z.coords.map(([lon, lat]) => [lat, lon]),
+  color: z.color.slice(0, 7),
+  score: z.score,
+  depth: z.depth,
+  risk: z.score >= 0.75 ? 'Critical' : z.score >= 0.45 ? 'High' : z.score >= 0.25 ? 'Medium' : 'Low',
+}))
 
-function FloodModeDashboard({ locations, selectedLocation, onLocationChange, liveAnalytics, weatherAlert, floodZones }) {
+const MAP_CENTER = [13.14679, 80.21152]
+const GRAD = 'linear-gradient(135deg, #1FA6C9, #0A5F8C)'
+const FILTERS = ['All', 'Critical', 'High', 'Medium', 'Low']
+
+const RISK_META = {
+  Critical: { color: '#ef4444', text: '#dc2626' },
+  High:     { color: '#f97316', text: '#c2410c' },
+  Medium:   { color: '#eab308', text: '#a16207' },
+  Low:      { color: '#22c55e', text: '#15803d' },
+}
+
+function FloodModeDashboard({ liveAnalytics }) {
+  const [filter, setFilter] = useState('All')
+  const [weatherAlert, setWeatherAlert] = useState(null)
+  const [weatherLoading, setWeatherLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(LAMBDA.WEATHER_ALERT)
+      .then((r) => r.json())
+      .then(setWeatherAlert)
+      .catch(() => setWeatherAlert({
+        message: 'Heavy rainfall expected. Monitor low-lying areas and prepare for evacuation.',
+        schedule: 'Updated every 6 hours',
+      }))
+      .finally(() => setWeatherLoading(false))
+  }, [])
+
+  const stats = useMemo(() => ({
+    total: ZONES.length,
+    critical: ZONES.filter((z) => z.risk === 'Critical').length,
+    high:     ZONES.filter((z) => z.risk === 'High').length,
+    medium:   ZONES.filter((z) => z.risk === 'Medium').length,
+    low:      ZONES.filter((z) => z.risk === 'Low').length,
+    maxDepth: Math.max(...ZONES.map((z) => z.depth)).toFixed(2),
+    avgScore: (ZONES.reduce((s, z) => s + z.score, 0) / ZONES.length).toFixed(2),
+  }), [])
+
+  const filtered = useMemo(
+    () => (filter === 'All' ? ZONES : ZONES.filter((z) => z.risk === filter)),
+    [filter],
+  )
+
   return (
-    <section className="h-[calc(100vh-92px)] p-4 sm:p-6 lg:p-8">
-      <div className="grid h-full gap-4 lg:grid-cols-[360px_1fr]">
-        <aside className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Flood Command Center</p>
-            <h2 className="mt-1 text-xl font-semibold text-white">Wet Season Operations</h2>
-          </div>
+    <section
+      className="os-flood-layout"
+      style={{
+        height: 'calc(100vh - 72px)',
+        padding: '20px',
+        background: '#F5F7F8',
+        display: 'grid',
+        gridTemplateColumns: '340px 1fr',
+        gap: 20,
+        boxSizing: 'border-box',
+      }}
+    >
+      {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
+      <aside
+        className="os-flood-sidebar"
+        style={{
+          background: '#fff',
+          borderRadius: 12,
+          padding: '24px',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+          border: '1px solid #eef1f3',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 20,
+          overflowY: 'auto',
+        }}
+      >
+        <div>
+          <p style={{ color: '#5E6B73', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 600 }}>
+            Flood Risk Analysis
+          </p>
+          <h2 style={{ color: '#1A1A1A', fontSize: 20, fontWeight: 700, marginTop: 4 }}>Zone Risk Dashboard</h2>
+        </div>
 
-          <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
-            <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-slate-400">Location</label>
-            <select
-              value={selectedLocation}
-              onChange={(event) => onLocationChange(event.target.value)}
-              className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500"
+        {/* Stats row */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[
+            { label: 'Total Zones', value: stats.total,    color: '#1FA6C9' },
+            { label: 'Critical',    value: stats.critical, color: '#ef4444' },
+            { label: 'Max Depth',   value: `${stats.maxDepth}m`, color: '#f97316' },
+          ].map((s) => (
+            <div key={s.label} style={{ flex: 1, background: '#F5F7F8', borderRadius: 10, padding: '12px 8px', textAlign: 'center', border: `2px solid ${s.color}33` }}>
+              <p style={{ color: s.color, fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{s.value}</p>
+              <p style={{ color: '#5E6B73', fontSize: 11, marginTop: 4, fontWeight: 500 }}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Live analytics */}
+        <div style={{ background: GRAD, borderRadius: 10, padding: '16px', color: '#fff' }}>
+          <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.16em', fontWeight: 600, opacity: 0.85 }}>
+            Live Analytics
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+            <Droplets style={{ width: 28, height: 28, opacity: 0.9 }} />
+            <div>
+              <p style={{ fontSize: 12, opacity: 0.85 }}>Active Flood Zones</p>
+              <p style={{ fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{stats.total}</p>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 12 }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '8px' }}>
+              <p style={{ opacity: 0.8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Critical</p>
+              <p style={{ fontWeight: 700, fontSize: 18 }}>{stats.critical}</p>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '8px' }}>
+              <p style={{ opacity: 0.8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Avg Score</p>
+              <p style={{ fontWeight: 700, fontSize: 18 }}>{stats.avgScore}</p>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '8px' }}>
+              <p style={{ opacity: 0.8, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Max Depth</p>
+              <p style={{ fontWeight: 700, fontSize: 18 }}>{stats.maxDepth}m</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Risk filter */}
+        <div>
+          <p style={{ color: '#5E6B73', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 600, marginBottom: 8 }}>
+            Filter by Risk
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {FILTERS.map((r) => {
+              const c = r === 'All' ? '#1FA6C9' : RISK_META[r].color
+              const active = filter === r
+              const count = r !== 'All' ? stats[r.toLowerCase()] : null
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setFilter(r)}
+                  style={{
+                    padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    fontFamily: 'inherit', cursor: 'pointer',
+                    border: `1.5px solid ${active ? c : '#e0e9ed'}`,
+                    background: active ? c : '#fff',
+                    color: active ? '#fff' : '#5E6B73',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {r}{count != null && <span style={{ opacity: 0.8, marginLeft: 4 }}>({count})</span>}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Weather alert */}
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '14px' }}>
+          <p style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#92400e', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 600 }}>
+            <CloudRain style={{ width: 13, height: 13 }} />
+            Weather Agent
+          </p>
+          {weatherLoading ? (
+            <p style={{ color: '#b45309', fontSize: 13, marginTop: 8, opacity: 0.7 }}>Fetching forecast…</p>
+          ) : (
+            <>
+              <p style={{ color: '#78350f', fontSize: 13, marginTop: 8, lineHeight: 1.65 }}>{weatherAlert?.message ?? 'No active weather alerts.'}</p>
+              {weatherAlert?.schedule && (
+                <p style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#92400e', fontSize: 12, marginTop: 6 }}>
+                  <Timer style={{ width: 12, height: 12 }} />{weatherAlert.schedule}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Dispatch button */}
+        <button
+          type="button"
+          style={{
+            marginTop: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            background: 'linear-gradient(90deg, #ef4444, #dc2626)',
+            color: '#fff',
+            padding: '14px',
+            borderRadius: '25px',
+            fontSize: 14,
+            fontWeight: 600,
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: '0 6px 18px rgba(239,68,68,0.28)',
+            fontFamily: 'inherit',
+          }}
+        >
+          <Siren style={{ width: 16, height: 16 }} />
+          Dispatch SMS Evacuation Alerts
+        </button>
+      </aside>
+
+      {/* ── Map ─────────────────────────────────────────────────────────── */}
+      <div
+        style={{
+          borderRadius: 12,
+          overflow: 'hidden',
+          position: 'relative',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+          border: '1px solid #eef1f3',
+        }}
+      >
+        <MapContainer center={MAP_CENTER} zoom={14} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
+          {filtered.map((zone) => (
+            <Polygon
+              key={zone.id}
+              positions={zone.positions}
+              pathOptions={{ color: zone.color, fillColor: zone.color, fillOpacity: 0.5, weight: 2 }}
             >
-              {locations.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.label}
-                </option>
-              ))}
-            </select>
+              <Tooltip sticky>
+                <div style={{ fontFamily: 'sans-serif', fontSize: 13, lineHeight: 1.7 }}>
+                  <strong style={{ color: RISK_META[zone.risk]?.text }}>{zone.risk} Risk Zone</strong><br />
+                  Risk Score: <strong>{zone.score.toFixed(2)}</strong><br />
+                  Estimated Depth: <strong>{zone.depth.toFixed(2)} m</strong>
+                </div>
+              </Tooltip>
+            </Polygon>
+          ))}
+        </MapContainer>
+
+        {/* Legend */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 20,
+            right: 20,
+            zIndex: 1000,
+            background: '#fff',
+            borderRadius: 10,
+            padding: '16px 20px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+            border: '1px solid #eef1f3',
+            minWidth: 220,
+          }}
+        >
+          <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#5E6B73', fontWeight: 600, marginBottom: 10 }}>Risk Level</p>
+          {[
+            { risk: 'Critical', label: 'Critical  ≥ 0.75' },
+            { risk: 'High',     label: 'High     0.45 – 0.75' },
+            { risk: 'Medium',   label: 'Medium  0.25 – 0.45' },
+            { risk: 'Low',      label: 'Low      < 0.25' },
+          ].map((item) => (
+            <div key={item.risk} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7, fontSize: 12, color: '#1A1A1A' }}>
+              <span style={{ width: 12, height: 12, borderRadius: 3, background: RISK_META[item.risk].color, flexShrink: 0 }} />
+              {item.label}
+            </div>
+          ))}
+          <div style={{ borderTop: '1px solid #eef1f3', marginTop: 10, paddingTop: 10 }}>
+            <p style={{ fontSize: 11, color: '#5E6B73' }}>Showing <strong style={{ color: '#1A1A1A' }}>{filtered.length}</strong> / {ZONES.length} zones</p>
           </div>
+        </div>
 
-          <div className="rounded-xl border border-cyan-500/40 bg-cyan-500/10 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-cyan-200">Live Analytics</p>
-            <p className="mt-3 text-sm text-cyan-100">Current AI Gauge Reading</p>
-            <p className="mt-2 flex items-end gap-2 text-3xl font-semibold text-white">
-              <Droplets className="h-7 w-7 text-cyan-300" />
-              {liveAnalytics.currentGauge}
-            </p>
-            <p className="mt-1 text-xs text-cyan-100/80">Trend: {liveAnalytics.trend}</p>
-          </div>
-
-          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
-            <p className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-amber-200">
-              <AlertTriangle className="h-4 w-4" />
-              Weather Agent
-            </p>
-            <p className="mt-3 text-sm text-amber-100">{weatherAlert.message}</p>
-            <p className="mt-2 flex items-center gap-2 text-xs text-amber-200/90">
-              <Timer className="h-4 w-4" />
-              {weatherAlert.schedule}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-500/20 px-4 py-3 text-sm font-semibold text-red-100 transition hover:bg-red-500/30"
-          >
-            <Siren className="h-4 w-4" />
-            Dispatch SMS Evacuation Alerts
-          </button>
-        </aside>
-
-        <div className="relative overflow-hidden rounded-2xl border border-slate-800">
-          <MapContainer center={mapCenter} zoom={13} className="h-full w-full">
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {floodZones.map((zone) => (
-              <Polygon
-                key={zone.id}
-                positions={zone.coordinates}
-                pathOptions={{
-                  color: zone.stroke,
-                  fillColor: zone.fill,
-                  fillOpacity: 0.45,
-                  weight: 1,
-                }}
-              />
-            ))}
-          </MapContainer>
-
-          <div className="absolute bottom-4 right-4 z-[1000] w-72 rounded-xl border border-slate-700 bg-slate-950/90 p-4 shadow-xl shadow-black/40">
-            <p className="mb-3 text-xs uppercase tracking-[0.2em] text-slate-300">Bathtub Inundation Depth</p>
-            <ul className="space-y-2 text-sm text-slate-100">
-              <li className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-yellow-400" />
-                Yellow: 0-0.5m Walkable
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-orange-500" />
-                Orange: 0.5-1.5m Dangerous
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-red-500" />
-                Red: 1.5m+ Critical
-              </li>
-            </ul>
-          </div>
-
-          <div className="absolute left-4 top-4 z-[1000] rounded-lg border border-slate-700 bg-slate-950/90 px-3 py-2 text-xs text-slate-200">
-            <p className="flex items-center gap-2">
-              <Bell className="h-4 w-4 text-cyan-300" />
-              Live Feed: {liveAnalytics.lastUpdated}
-            </p>
-          </div>
+        {/* Live feed badge */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 16,
+            left: 16,
+            zIndex: 1000,
+            background: '#fff',
+            borderRadius: 8,
+            padding: '8px 14px',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.09)',
+            border: '1px solid #eef1f3',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 13,
+            color: '#1A1A1A',
+          }}
+        >
+          <Bell style={{ width: 15, height: 15, color: '#1FA6C9' }} />
+          Live Feed: Real-time
         </div>
       </div>
     </section>
@@ -110,3 +303,4 @@ function FloodModeDashboard({ locations, selectedLocation, onLocationChange, liv
 }
 
 export default FloodModeDashboard
+

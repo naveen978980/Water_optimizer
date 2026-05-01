@@ -1,7 +1,7 @@
 import requests
 import json
 
-API_KEY = "2ea43430f5e20d5cb576000851d9ebdc"
+API_KEY = "your api key here"
 
 LAT = 13.0827
 LON = 80.2707
